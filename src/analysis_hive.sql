@@ -84,7 +84,7 @@ FROM (
             ORDER BY COUNT(*) DESC
         ) AS rk
     FROM flights_clean
-    WHERE cause IS NOT NULL AND cause != ''
+    WHERE cause IS NOT NULL AND cause != '' AND cause != 'UNKNOWN'
     GROUP BY origin, month, cause
 ) ranked
 WHERE rk <= 3

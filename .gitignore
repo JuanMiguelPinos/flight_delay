@@ -1,8 +1,12 @@
-# Dataset and processed data (too large for GitHub)
+# Dataset and processed data, too large for GitHub
 data/raw/
 data/processed/
 data/hive/flights_clean/
-data/results/
+
+# Results are generated locally
+data/results/*
+!data/results/metrics/
+!data/results/metrics/execution_times.csv
 
 # Python
 __pycache__/
@@ -10,14 +14,17 @@ __pycache__/
 *.pyo
 .env
 
-# Spark logs
+# Spark / Hive logs and metadata
 derby.log
 metastore_db/
 spark-warehouse/
+tmp/
 
 # IDE
 .idea/
 .vscode/
 
-# Temp
+# OS / temp
+.DS_Store
+Thumbs.db
 scripts/Nuevo Documento de texto.txt

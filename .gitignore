@@ -1,0 +1,23 @@
+# Dataset and processed data (too large for GitHub)
+data/raw/
+data/processed/
+data/hive/flights_clean/
+data/results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Spark logs
+derby.log
+metastore_db/
+spark-warehouse/
+
+# IDE
+.idea/
+.vscode/
+
+# Temp
+scripts/Nuevo Documento de texto.txt

@@ -1,0 +1,39 @@
+services:
+
+  metastore:
+    image: apache/hive:4.1.0
+    container_name: hive-metastore
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: derby
+    volumes:
+      - hive-metastore-db:/opt/hive/data/derby
+      - ./data/hive:/opt/hive/data/ext
+    ports:
+      - "9083:9083"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9083"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  hiveserver2:
+    image: apache/hive:4.1.0
+    container_name: hive4
+    depends_on:
+      metastore:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: hiveserver2
+      SERVICE_OPTS: "-Dhive.metastore.uris=thrift://metastore:9083"
+      SKIP_SCHEMA_INIT: "true"   # ← hiveserver2 NO inicializa schema, lo hace el metastore
+    volumes:
+      - ./data/hive:/opt/hive/data/ext
+      - ./src:/opt/hive/user_scripts   # ← ruta cambiada, no sobreescribe los scripts internos
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+
+volumes:
+  hive-metastore-db:

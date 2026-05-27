@@ -51,59 +51,64 @@ data/raw/flight_data_2024.csv
 ---
 
 ## Project structure
+```text
 flight_delay_project/
 │
 ├── data/
-│   ├── raw/                                      # Original CSV — not tracked by Git
-│   ├── processed/                                # Cleaned Parquet — not tracked by Git
+│   ├── raw/                         # Original CSV — not tracked by Git
+│   ├── processed/                   # Cleaned Parquet — not tracked by Git
+│   │
 │   ├── hive/
-│   │   ├── flights_clean/                        # PSV file for Hive — not tracked by Git
-│   │   └── results/                              # Hive query outputs
+│   │   ├── flights_clean/           # PSV file for Hive — not tracked by Git
+│   │   └── results/                 # Hive query outputs
 │   │       ├── 3_1/
 │   │       ├── 3_2_ranges/
 │   │       ├── 3_2_causes/
 │   │       └── 3_3/
+│   │
 │   └── results/
-│       ├── spark_sql/                            # Spark SQL benchmark outputs
+│       ├── spark_sql/               # Spark SQL benchmark outputs
 │       │   ├── 3_1/
 │       │   └── 3_2/
-│       ├── spark_core/                           # Spark Core benchmark outputs
+│       │
+│       ├── spark_core/              # Spark Core benchmark outputs
 │       │   ├── 3_1/
 │       │   └── 3_2/
+│       │
 │       └── metrics/
-│           └── execution_times.csv              # Benchmark results — tracked by Git
+│           └── execution_times.csv  # Benchmark results — tracked by Git
 │
 ├── report/
-│   └── figures/                                  # Generated performance charts
+│   └── figures/                     # Generated performance charts
 │       ├── execution_time_by_technology.png
 │       ├── scalability_analysis_3.1.png
 │       └── scalability_analysis_3.2.png
 │
 ├── scripts/
-│   ├── run_local.sh                              # Full local execution script
-│   └── run_cluster.sh                            # Template for cluster execution
+│   ├── run_local.sh                 # Full local execution script
+│   └── run_cluster.sh               # Template for cluster execution
 │
 ├── src/
-│   ├── data_preparation.py                       # Cleans CSV and writes Parquet
-│   ├── prepare_hive_text_data.py                 # Converts cleaned data to PSV for Hive
+│   ├── data_preparation.py          # Cleans CSV and writes Parquet
+│   ├── prepare_hive_text_data.py    # Converts cleaned data to PSV for Hive
 │   │
-│   ├── analysis_spark.py                         # Spark SQL — Analysis 3.1
-│   ├── analysis_spark_2.py                       # Spark SQL — Analysis 3.2
+│   ├── analysis_spark.py            # Spark SQL — Analysis 3.1
+│   ├── analysis_spark_2.py          # Spark SQL — Analysis 3.2
 │   │
-│   ├── analysis_rdd_3_1.py                       # Spark Core / RDD — Analysis 3.1
-│   ├── analysis_rdd_3_2.py                       # Spark Core / RDD — Analysis 3.2
+│   ├── analysis_rdd_3_1.py          # Spark Core / RDD — Analysis 3.1
+│   ├── analysis_rdd_3_2.py          # Spark Core / RDD — Analysis 3.2
 │   │
-│   ├── create_hive_tables.sql                    # Hive database and table creation
-│   ├── analysis_hive.sql                         # Hive — Analyses 3.1, 3.2 and 3.3
+│   ├── create_hive_tables.sql       # Hive database and table creation
+│   ├── analysis_hive.sql            # Hive — Analyses 3.1, 3.2 and 3.3
 │   │
-│   ├── benchmark.py                              # Execution time benchmark (Spark SQL + Core)
-│   └── generate_charts.py                        # Performance chart generation
+│   ├── benchmark.py                 # Execution time benchmark
+│   └── generate_charts.py           # Performance chart generation
 │
-├── docker-compose.yml                            # Hive Metastore + HiveServer2
+├── docker-compose.yml               # Hive Metastore + HiveServer2
 ├── requirements.txt
 ├── .gitignore
 └── README.md
-
+```
 ---
 
 ## Installation

@@ -1,0 +1,13 @@
+Environment,Technology,Analysis,Input_Size,Cluster_Size,Time_s
+EMR,Spark SQL,3.1,25%,1-primary-1-core,11.36
+EMR,Spark SQL,3.2,25%,1-primary-1-core,12.05
+EMR,Spark Core,3.1,25%,1-primary-1-core,33.18
+EMR,Spark Core,3.2,25%,1-primary-1-core,55.54
+EMR,Spark SQL,3.1,50%,1-primary-1-core,7.18
+EMR,Spark SQL,3.2,50%,1-primary-1-core,6.18
+EMR,Spark Core,3.1,50%,1-primary-1-core,56.83
+EMR,Spark Core,3.2,50%,1-primary-1-core,103.97
+EMR,Spark SQL,3.1,100%,1-primary-1-core,10.63
+EMR,Spark SQL,3.2,100%,1-primary-1-core,6.52
+EMR,Spark Core,3.1,100%,1-primary-1-core,108.0
+EMR,Spark Core,3.2,100%,1-primary-1-core,205.97

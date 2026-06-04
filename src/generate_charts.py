@@ -3,104 +3,140 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
-TIMES_CSV   = "../data/results/metrics/execution_times.csv"
-FIGURES_DIR = "../report/figures"
+TIMES_CSV = os.getenv("TIMES_CSV", "../data/results/metrics/execution_times.csv")
+FIGURES_DIR = os.getenv("FIGURES_DIR", "../report/figures")
 
 def load_times():
     rows = []
-    with open(TIMES_CSV, newline="") as f:
-        reader = csv.DictReader(f)
+
+    with open(TIMES_CSV, newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+
         for row in reader:
             rows.append({
+                "Environment": row.get("Environment", "Local"),
                 "Technology": row["Technology"],
-                "Analysis":   row["Analysis"],
+                "Analysis": row["Analysis"],
                 "Input_Size": row["Input_Size"],
-                "Time_s":     float(row["Time_s"]),
+                "Cluster_Size": row.get("Cluster_Size", "local"),
+                "Time_s": float(row["Time_s"]),
             })
+
     return rows
 
 def chart_by_technology(rows):
-    """Tiempo por tecnología para cada análisis (100% del dataset)."""
-    full = [r for r in rows if r["Input_Size"] == "100%"]
-    analyses = sorted(set(r["Analysis"] for r in full))
-    techs    = sorted(set(r["Technology"] for r in full))
-    colors   = {"Spark SQL": "#2196F3", "Spark Core": "#FF9800", "Hive": "#4CAF50"}
+    full = [row for row in rows if row["Input_Size"] == "100%"]
+    analyses = sorted(set(row["Analysis"] for row in full))
+    techs = sorted(set(row["Technology"] for row in full))
+    environments = sorted(set(row["Environment"] for row in full))
 
-    x    = np.arange(len(analyses))
-    w    = 0.25
-    fig, ax = plt.subplots(figsize=(10, 6))
+    x = np.arange(len(analyses))
+    width = 0.8 / max(1, len(techs) * len(environments))
+    fig, ax = plt.subplots(figsize=(12, 6))
 
-    for i, tech in enumerate(techs):
-        times = []
-        for an in analyses:
-            match = [r["Time_s"] for r in full
-                     if r["Technology"] == tech and r["Analysis"] == an]
-            times.append(match[0] if match else 0)
-        bars = ax.bar(x + i*w, times, w, label=tech,
-                      color=colors.get(tech, "#9C27B0"))
-        for bar, t in zip(bars, times):
-            if t > 0:
-                ax.text(bar.get_x() + bar.get_width()/2,
-                        bar.get_height() + 0.3,
-                        f"{t}s", ha="center", va="bottom", fontsize=9)
+    offset_index = 0
+    for environment in environments:
+        for tech in techs:
+            times = []
+
+            for analysis in analyses:
+                match = [
+                    row["Time_s"]
+                    for row in full
+                    if row["Environment"] == environment
+                    and row["Technology"] == tech
+                    and row["Analysis"] == analysis
+                ]
+                times.append(match[0] if match else 0)
+
+            offset = (offset_index - ((len(techs) * len(environments) - 1) / 2)) * width
+            bars = ax.bar(x + offset, times, width, label=f"{environment} - {tech}")
+
+            for bar, value in zip(bars, times):
+                if value > 0:
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        bar.get_height(),
+                        f"{value}s",
+                        ha="center",
+                        va="bottom",
+                        fontsize=8,
+                        rotation=90,
+                    )
+
+            offset_index += 1
 
     ax.set_xlabel("Analysis")
     ax.set_ylabel("Execution Time (seconds)")
-    ax.set_title("Execution Time by Technology (100% dataset, local mode)")
-    ax.set_xticks(x + w)
-    ax.set_xticklabels([f"Analysis {a}" for a in analyses])
-    ax.legend()
+    ax.set_title("Execution Time by Technology and Environment (100% dataset)")
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"Analysis {analysis}" for analysis in analyses])
+    ax.legend(fontsize=8)
     ax.grid(axis="y", alpha=0.3)
+
     plt.tight_layout()
-    path = os.path.join(FIGURES_DIR, "execution_time_by_technology.png")
+    path = os.path.join(FIGURES_DIR, "execution_time_by_technology_environment.png")
     plt.savefig(path, dpi=150)
     plt.close()
-    print(f"Guardado: {path}")
+    print(f"Saved: {path}")
 
 def chart_by_input_size(rows):
-    """Tiempo vs tamaño de entrada por tecnología."""
-    colors = {"Spark SQL": "#2196F3", "Spark Core": "#FF9800", "Hive": "#4CAF50"}
-    sizes  = ["25%", "50%", "100%"]
-    techs  = sorted(set(r["Technology"] for r in rows))
+    sizes = ["25%", "50%", "100%"]
+    techs = sorted(set(row["Technology"] for row in rows))
+    environments = sorted(set(row["Environment"] for row in rows))
 
-    for analysis in sorted(set(r["Analysis"] for r in rows)):
-        fig, ax = plt.subplots(figsize=(9, 5))
-        for tech in techs:
-            times = []
-            for s in sizes:
-                match = [r["Time_s"] for r in rows
-                         if r["Technology"] == tech
-                         and r["Analysis"] == analysis
-                         and r["Input_Size"] == s]
-                times.append(match[0] if match else None)
-            valid_s = [s for s, t in zip(sizes, times) if t is not None]
-            valid_t = [t for t in times if t is not None]
-            if valid_t:
-                ax.plot(valid_s, valid_t, marker="o",
-                        label=tech, color=colors.get(tech, "#9C27B0"),
-                        linewidth=2)
-                for xs, yt in zip(valid_s, valid_t):
-                    ax.annotate(f"{yt}s", (xs, yt),
-                                textcoords="offset points",
-                                xytext=(0, 8), ha="center", fontsize=8)
+    for analysis in sorted(set(row["Analysis"] for row in rows)):
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        for environment in environments:
+            for tech in techs:
+                times = []
+
+                for size in sizes:
+                    match = [
+                        row["Time_s"]
+                        for row in rows
+                        if row["Environment"] == environment
+                        and row["Technology"] == tech
+                        and row["Analysis"] == analysis
+                        and row["Input_Size"] == size
+                    ]
+                    times.append(match[0] if match else None)
+
+                valid_sizes = [size for size, time_value in zip(sizes, times) if time_value is not None]
+                valid_times = [time_value for time_value in times if time_value is not None]
+
+                if valid_times:
+                    ax.plot(valid_sizes, valid_times, marker="o", label=f"{environment} - {tech}", linewidth=2)
+
+                    for x_value, y_value in zip(valid_sizes, valid_times):
+                        ax.annotate(
+                            f"{y_value}s",
+                            (x_value, y_value),
+                            textcoords="offset points",
+                            xytext=(0, 8),
+                            ha="center",
+                            fontsize=8,
+                        )
 
         ax.set_xlabel("Input Size (% of dataset)")
         ax.set_ylabel("Execution Time (seconds)")
-        ax.set_title(f"Scalability — Analysis {analysis} (local mode)")
-        ax.legend()
+        ax.set_title(f"Scalability — Analysis {analysis}")
+        ax.legend(fontsize=8)
         ax.grid(alpha=0.3)
+
         plt.tight_layout()
         path = os.path.join(FIGURES_DIR, f"scalability_analysis_{analysis}.png")
         plt.savefig(path, dpi=150)
         plt.close()
-        print(f"Guardado: {path}")
+        print(f"Saved: {path}")
 
 def main():
     os.makedirs(FIGURES_DIR, exist_ok=True)
     rows = load_times()
     chart_by_technology(rows)
     chart_by_input_size(rows)
-    print("Todos los gráficos generados.")
+    print("All charts generated.")
 
 if __name__ == "__main__":
     main()

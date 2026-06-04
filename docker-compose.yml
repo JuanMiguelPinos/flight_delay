@@ -27,10 +27,10 @@ services:
     environment:
       SERVICE_NAME: hiveserver2
       SERVICE_OPTS: "-Dhive.metastore.uris=thrift://metastore:9083"
-      SKIP_SCHEMA_INIT: "true"   # ← hiveserver2 NO inicializa schema, lo hace el metastore
+      SKIP_SCHEMA_INIT: "true"
     volumes:
       - ./data/hive:/opt/hive/data/ext
-      - ./src:/opt/hive/user_scripts   # ← ruta cambiada, no sobreescribe los scripts internos
+      - ./src:/opt/hive/user_scripts
     ports:
       - "10000:10000"
       - "10002:10002"

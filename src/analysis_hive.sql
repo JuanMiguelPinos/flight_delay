@@ -1,14 +1,5 @@
--- =================================================================
--- PROYECTO BIG DATA - ANÁLISIS HIVE
--- =================================================================
-
 USE flights_db;
 
--- =================================================================
--- ANÁLISIS 3.1: Estadísticas por aerolínea y aeropuerto
--- =================================================================
-
--- Primeras 10 filas para el informe
 SELECT
     airline                                        AS Airline_Code,
     origin                                         AS Departure_Airport,
@@ -23,7 +14,6 @@ GROUP BY airline, origin
 ORDER BY airline, origin
 LIMIT 10;
 
--- Resultado completo guardado en fichero (aparecerá en data/hive/results/3_1/)
 INSERT OVERWRITE LOCAL DIRECTORY '/opt/hive/data/ext/results/3_1'
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
@@ -40,13 +30,6 @@ FROM flights_clean
 GROUP BY airline, origin
 ORDER BY airline, origin;
 
-
--- =================================================================
--- ANÁLISIS 3.2: Reporte de retrasos por aeropuerto y mes
--- =================================================================
-
--- Paso 1: contar vuelos por (aeropuerto, mes, categoría) con medias
--- Primeras 10 filas para el informe
 SELECT
     origin                                                  AS Departure_Airport,
     month                                                   AS Month,
@@ -70,8 +53,6 @@ GROUP BY
 ORDER BY origin, month, Delay_Category
 LIMIT 10;
 
--- Paso 2: top 3 causas por (aeropuerto, mes)
--- Primeras 10 filas para el informe
 SELECT origin, month, cause, cause_count
 FROM (
     SELECT
@@ -91,7 +72,6 @@ WHERE rk <= 3
 ORDER BY origin, month, rk
 LIMIT 10;
 
--- Resultado completo 3.2 parte A (rangos de retraso)
 INSERT OVERWRITE LOCAL DIRECTORY '/opt/hive/data/ext/results/3_2_ranges'
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
@@ -116,7 +96,6 @@ GROUP BY
     END
 ORDER BY origin, month, Delay_Category;
 
--- Resultado completo 3.2 parte B (top 3 causas)
 INSERT OVERWRITE LOCAL DIRECTORY '/opt/hive/data/ext/results/3_2_causes'
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
@@ -138,12 +117,6 @@ FROM (
 WHERE rk <= 3
 ORDER BY origin, month, rk;
 
-
--- =================================================================
--- ANÁLISIS 3.3: Ranking aerolínea-aeropuerto con comportamiento anómalo
--- =================================================================
-
--- Primeras 10 filas para el informe
 SELECT
     f.origin                                                  AS Departure_Airport,
     f.airline                                                 AS Airline,
@@ -168,7 +141,6 @@ GROUP BY f.origin, f.airline, ap.avg_airport_dep
 ORDER BY f.origin, Ranking_At_Airport
 LIMIT 10;
 
--- Resultado completo 3.3
 INSERT OVERWRITE LOCAL DIRECTORY '/opt/hive/data/ext/results/3_3'
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','

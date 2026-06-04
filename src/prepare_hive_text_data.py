@@ -1,13 +1,12 @@
 from pathlib import Path
 import csv
-
+import os
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-RAW_PATH = PROJECT_ROOT / "data" / "raw" / "flight_data_2024.csv"
-OUTPUT_DIR = PROJECT_ROOT / "data" / "hive" / "flights_clean"
-OUTPUT_PATH = OUTPUT_DIR / "flights_clean_hive.psv"
-
+RAW_PATH = Path(os.getenv("RAW_PATH", str(PROJECT_ROOT / "data" / "raw" / "flight_data_2024.csv")))
+OUTPUT_DIR = Path(os.getenv("HIVE_TEXT_OUTPUT_DIR", str(PROJECT_ROOT / "data" / "hive" / "flights_clean")))
+OUTPUT_PATH = Path(os.getenv("HIVE_TEXT_OUTPUT_PATH", str(OUTPUT_DIR / "flights_clean_hive.psv")))
 
 REQUIRED_COLUMNS = [
     "op_unique_carrier",
@@ -25,7 +24,6 @@ REQUIRED_COLUMNS = [
     "late_aircraft_delay",
 ]
 
-
 OUTPUT_COLUMNS = [
     "airline",
     "origin",
@@ -39,7 +37,6 @@ OUTPUT_COLUMNS = [
     "cause",
 ]
 
-
 def clean_text(value):
     if value is None:
         return ""
@@ -50,7 +47,6 @@ def clean_text(value):
         return ""
 
     return value.upper()
-
 
 def clean_number(value):
     if value is None:
@@ -63,7 +59,6 @@ def clean_number(value):
 
     return value
 
-
 def cancelled_to_int(value):
     value = str(value).strip().lower()
 
@@ -71,7 +66,6 @@ def cancelled_to_int(value):
         return "1"
 
     return "0"
-
 
 def to_float(value):
     try:
@@ -88,12 +82,16 @@ def to_float(value):
     except ValueError:
         return 0.0
 
-
 def infer_cause(row):
     cancellation_code = clean_text(row.get("cancellation_code", ""))
 
     if cancelled_to_int(row.get("cancelled", "")) == "1" and cancellation_code:
         return f"CANCEL_{cancellation_code}"
+
+    dep_delay = to_float(row.get("dep_delay"))
+
+    if dep_delay < 15:
+        return "UNKNOWN"
 
     causes = {
         "CARRIER_DELAY": to_float(row.get("carrier_delay")),
@@ -109,7 +107,6 @@ def infer_cause(row):
         return best_cause[0]
 
     return "UNKNOWN"
-
 
 def main():
     if not RAW_PATH.exists():
@@ -177,7 +174,6 @@ def main():
     print("Input rows:", total_rows)
     print("Written rows:", written_rows)
     print("Output:", OUTPUT_PATH)
-
 
 if __name__ == "__main__":
     main()

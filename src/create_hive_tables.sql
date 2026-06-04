@@ -1,9 +1,5 @@
--- =============================================================
--- SCRIPT DE CREACIÓN DE BASE DE DATOS Y TABLA EXTERNA EN HIVE
--- Ejecutar con:
---   docker exec -it hive4 beeline -u "jdbc:hive2://localhost:10000"
---   -f /opt/hive/user_scripts/create_hive_tables.sql
--- =============================================================
+--docker exec -it hive4 beeline -u "jdbc:hive2://localhost:10000"
+-- -f /opt/hive/user_scripts/create_hive_tables.sql
 
 CREATE DATABASE IF NOT EXISTS flights_db;
 USE flights_db;
@@ -28,5 +24,4 @@ STORED AS TEXTFILE
 LOCATION '/opt/hive/data/ext/flights_clean'
 TBLPROPERTIES ("skip.header.line.count"="1");
 
--- Verificar carga
 SELECT COUNT(*) AS total_records FROM flights_clean;

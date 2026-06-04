@@ -1,28 +1,85 @@
 import os
-# Mantenemos las variables de entorno para que Windows no falle al guardar
-os.environ["HADOOP_HOME"] = "C:\\hadoop"
-os.environ["PATH"] += os.pathsep + "C:\\hadoop\\bin"
+import sys
+from pathlib import Path
+
+RUN_MODE = os.getenv("RUN_MODE", "local").lower()
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+DEFAULT_DATA_PATH = PROJECT_ROOT / "data" / "processed" / "flights_cleaned.parquet"
+DEFAULT_OUTPUT_BASE = PROJECT_ROOT / "data" / "results" / "spark_sql" / "3_1"
+DEFAULT_SPARK_TMP = PROJECT_ROOT / "tmp" / "spark"
+
+DATA_PATH = os.getenv("DATA_PATH", str(DEFAULT_DATA_PATH))
+OUTPUT_BASE = os.getenv("OUTPUT_BASE", str(DEFAULT_OUTPUT_BASE))
+SPARK_TMP = Path(os.getenv("SPARK_TMP", str(DEFAULT_SPARK_TMP)))
+NUM_PARTITIONS = int(os.getenv("NUM_PARTITIONS", "8"))
+DEFAULT_SAMPLE_FRACTION = 1.0
+
+if RUN_MODE == "local":
+    SPARK_TMP.mkdir(parents=True, exist_ok=True)
+    os.environ["HADOOP_HOME"] = os.getenv("HADOOP_HOME", "C:\\hadoop")
+    os.environ["PATH"] += os.pathsep + os.path.join(os.environ["HADOOP_HOME"], "bin")
+    os.environ["SPARK_LOCAL_DIRS"] = str(SPARK_TMP)
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import concat_ws
 
-def analyze_airline_statistics():
-    # Inicializamos Spark
-    spark = SparkSession.builder \
-        .appName("AirlineStatistics_SparkSQL") \
-        .master("local[*]") \
-        .getOrCreate()
+def get_sample_fraction():
+    if len(sys.argv) >= 2:
+        try:
+            value = float(sys.argv[1])
+            if value <= 0 or value > 1:
+                raise ValueError
+            return value
+        except ValueError:
+            raise ValueError(
+                "The fraction must be a number [0,1]"
+            )
 
-    print("--- Spark Session iniciada ---")
-    
-    # 1. Cargar los datos procesados en formato Parquet
-    data_path = "../data/processed/flights_cleaned.parquet"
-    df = spark.read.parquet(data_path)
-    
-    # 2. Registrar el DataFrame como una vista SQL temporal
+    return DEFAULT_SAMPLE_FRACTION
+
+def fraction_label(fraction):
+    return f"{int(fraction * 100)}pct"
+
+def make_output_path(base_path, fraction):
+    return f"{base_path.rstrip('/')}/fraction_{fraction_label(fraction)}"
+
+def build_spark():
+    builder = SparkSession.builder.appName("AirlineStatistics_SparkSQL")
+
+    if RUN_MODE == "local":
+        builder = (
+            builder
+            .master("local[*]")
+            .config("spark.sql.shuffle.partitions", str(NUM_PARTITIONS))
+            .config("spark.local.dir", str(SPARK_TMP))
+        )
+
+    spark = builder.getOrCreate()
+    spark.sparkContext.setLogLevel("WARN")
+    return spark
+
+def analyze_airline_statistics():
+    sample_fraction = get_sample_fraction()
+    output_path = make_output_path(OUTPUT_BASE, sample_fraction)
+
+    spark = build_spark()
+
+    print("Spark Session started:")
+    print(f"Run mode: {RUN_MODE}")
+    print(f"Reading data from: {DATA_PATH}")
+    print(f"Sample fraction used: {sample_fraction}")
+
+    if RUN_MODE == "local" and not Path(DATA_PATH).exists():
+        raise FileNotFoundError(f"The processed dataset does not exist: {DATA_PATH}")
+
+    df = spark.read.parquet(DATA_PATH)
+
+    if sample_fraction < 1.0:
+        df = df.sample(withReplacement=False, fraction=sample_fraction, seed=42)
+
     df.createOrReplaceTempView("flights")
 
-    # 3. La consulta SQL que cumple el 100% de los requisitos del apartado 3.1
     query = """
         SELECT 
             op_unique_carrier AS Airline_Code,
@@ -37,23 +94,19 @@ def analyze_airline_statistics():
         GROUP BY op_unique_carrier, origin
         ORDER BY Airline_Code, Departure_Airport
     """
-    
-    print("Ejecutando Análisis 3.1 con Spark SQL...")
+
+    print("Running Analysis 3.1 with Spark SQL")
     result_df = spark.sql(query)
-    
-    # Mostrar las primeras 10 filas (Obligatorio incluirlo en tu reporte final)
-    print("\n--- PRIMERAS 10 FILAS DEL RESULTADO (Cópialas para tu informe PDF) ---")
+
+    print("\nFIRST 10 ROWS OF THE RESULT:")
     result_df.show(10, truncate=False)
 
-    # 4. Guardar los resultados en un CSV para que los tengas a mano
-    output_path = "../data/results/3_1_airline_statistics"
-    print(f"Guardando reporte final en: {output_path}")
-    
-    # repartition(1) fuerza a que se guarde como un único archivo CSV en lugar de varios
+    print(f"Saving final report to: {output_path}")
+
     result_df.withColumn("Operating_Months", concat_ws(", ", "Operating_Months")) \
              .repartition(1).write.mode("overwrite").csv(output_path, header=True)
-    
-    print("--- ¡Análisis 3.1 completado! ---")
+
+    print("3.1 completed:")
     spark.stop()
 
 if __name__ == "__main__":

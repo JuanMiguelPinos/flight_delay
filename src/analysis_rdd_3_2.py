@@ -2,25 +2,24 @@ import os
 import sys
 from pathlib import Path
 
-# -------------------------------------------------------------------
-# Configuración de rutas
-# -------------------------------------------------------------------
+RUN_MODE = os.getenv("RUN_MODE", "local").lower()
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-DATA_PATH = PROJECT_ROOT / "data" / "processed" / "flights_cleaned.parquet"
-OUTPUT_BASE = PROJECT_ROOT / "data" / "results" / "spark_core" / "3_2"
-SPARK_TMP = PROJECT_ROOT / "tmp" / "spark"
+DEFAULT_DATA_PATH = PROJECT_ROOT / "data" / "processed" / "flights_cleaned.parquet"
+DEFAULT_OUTPUT_BASE = PROJECT_ROOT / "data" / "results" / "spark_core" / "3_2"
+DEFAULT_SPARK_TMP = PROJECT_ROOT / "tmp" / "spark"
 
-SPARK_TMP.mkdir(parents=True, exist_ok=True)
+DATA_PATH = os.getenv("DATA_PATH", str(DEFAULT_DATA_PATH))
+OUTPUT_BASE = os.getenv("OUTPUT_BASE", str(DEFAULT_OUTPUT_BASE))
+SPARK_TMP = Path(os.getenv("SPARK_TMP", str(DEFAULT_SPARK_TMP)))
+NUM_PARTITIONS = int(os.getenv("NUM_PARTITIONS", "8"))
 
-# -------------------------------------------------------------------
-# Configuración Windows / Hadoop / Spark
-# -------------------------------------------------------------------
-os.environ["HADOOP_HOME"] = "C:\\hadoop"
-os.environ["PATH"] += os.pathsep + "C:\\hadoop\\bin"
-os.environ["SPARK_LOCAL_DIRS"] = str(SPARK_TMP)
+if RUN_MODE == "local":
+    SPARK_TMP.mkdir(parents=True, exist_ok=True)
+    os.environ["HADOOP_HOME"] = os.getenv("HADOOP_HOME", "C:\\hadoop")
+    os.environ["PATH"] += os.pathsep + os.path.join(os.environ["HADOOP_HOME"], "bin")
+    os.environ["SPARK_LOCAL_DIRS"] = str(SPARK_TMP)
 
-# Usar exactamente el Python con el que se ejecuta este script
 python_exe = sys.executable
 os.environ["PYSPARK_PYTHON"] = python_exe
 os.environ["PYSPARK_DRIVER_PYTHON"] = python_exe
@@ -37,18 +36,7 @@ from pyspark.sql.types import (
 )
 import pyspark.sql.functions as F
 
-
-# -------------------------------------------------------------------
-# Fracción de datos
-# -------------------------------------------------------------------
-# Por defecto ejecuta el 5% del dataset.
-# Puedes cambiarlo al ejecutar:
-#   python analysis_rdd.py 0.10
-#   python analysis_rdd.py 0.25
-#   python analysis_rdd.py 1.0
-# -------------------------------------------------------------------
 DEFAULT_SAMPLE_FRACTION = 0.05
-
 
 def get_sample_fraction():
     if len(sys.argv) >= 2:
@@ -59,34 +47,35 @@ def get_sample_fraction():
             return value
         except ValueError:
             raise ValueError(
-                "La fracción debe ser un número entre 0 y 1. "
-                "Ejemplo: python analysis_rdd.py 0.05"
+                "The fraction must be a number [0,1]"
             )
 
     return DEFAULT_SAMPLE_FRACTION
 
-
 def fraction_label(fraction):
     return f"{int(fraction * 100)}pct"
 
+def make_output_path(base_path, fraction):
+    return f"{base_path.rstrip('/')}/fraction_{fraction_label(fraction)}"
 
 def build_spark():
-    spark = (
-        SparkSession.builder
-        .appName("DelayReport_SparkCore_RDD")
-        .master("local[2]")
-        .config("spark.driver.memory", "12g")
-        .config("spark.executor.memory", "4g")
-        .config("spark.sql.shuffle.partitions", "8")
-        .config("spark.default.parallelism", "8")
-        .config("spark.local.dir", str(SPARK_TMP))
-        .config("spark.python.worker.reuse", "true")
-        .getOrCreate()
-    )
+    builder = SparkSession.builder.appName("DelayReport_SparkCore_RDD")
 
+    if RUN_MODE == "local":
+        builder = (
+            builder
+            .master("local[2]")
+            .config("spark.driver.memory", "12g")
+            .config("spark.executor.memory", "4g")
+            .config("spark.sql.shuffle.partitions", str(NUM_PARTITIONS))
+            .config("spark.default.parallelism", str(NUM_PARTITIONS))
+            .config("spark.local.dir", str(SPARK_TMP))
+            .config("spark.python.worker.reuse", "true")
+        )
+
+    spark = builder.getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     return spark
-
 
 def categorize_delay(delay):
     if delay < 15:
@@ -96,16 +85,13 @@ def categorize_delay(delay):
     else:
         return "3_High (>60m)"
 
-
 def safe_float(value):
     if value is None:
         return 0.0
-
     try:
         return float(value)
     except Exception:
         return 0.0
-
 
 def safe_int(value):
     if value is None:
@@ -119,7 +105,6 @@ def safe_int(value):
         except Exception:
             return 0
 
-
 def get_delay_or_cancel_cause(row, dep_delay, cancelled):
     cancel_map = {
         "A": "CANCEL_CARRIER",
@@ -132,7 +117,6 @@ def get_delay_or_cancel_cause(row, dep_delay, cancelled):
         code = row.cancellation_code or "UNKNOWN"
         return cancel_map.get(str(code).strip(), "CANCEL_UNKNOWN")
 
-    # Si no está cancelado y no tiene retraso relevante, no contamos causa
     if dep_delay < 15:
         return None
 
@@ -151,7 +135,6 @@ def get_delay_or_cancel_cause(row, dep_delay, cancelled):
 
     return None
 
-
 def top3_causes_to_string(causes_iterable):
     causes = list(causes_iterable)
 
@@ -164,32 +147,26 @@ def top3_causes_to_string(causes_iterable):
 
     return "; ".join(f"{cause}:{count}" for cause, count in top3)
 
-
 def analyze_delay_report_rdd():
     sample_fraction = get_sample_fraction()
-    output_path = OUTPUT_BASE / f"fraction_{fraction_label(sample_fraction)}"
+    output_path = make_output_path(OUTPUT_BASE, sample_fraction)
 
     spark = build_spark()
 
-    print("--- Spark Session (Core/RDD) iniciada ---")
-    print(f"Leyendo datos desde: {DATA_PATH}")
-    print(f"Fracción utilizada: {sample_fraction}")
-    print(f"Salida: {output_path}")
+    print("Spark Session (Core/RDD) started:")
+    print(f"Run mode: {RUN_MODE}")
+    print(f"Reading data from: {DATA_PATH}")
+    print(f"Sample fraction used: {sample_fraction}")
+    print(f"Output path: {output_path}")
 
-    if not DATA_PATH.exists():
-        raise FileNotFoundError(f"No existe el dataset procesado: {DATA_PATH}")
+    if RUN_MODE == "local" and not Path(DATA_PATH).exists():
+        raise FileNotFoundError(f"The processed dataset does not exist: {DATA_PATH}")
 
-    # -------------------------------------------------------------------
-    # Lectura y muestreo
-    # -------------------------------------------------------------------
-    df = spark.read.parquet(str(DATA_PATH))
+    df = spark.read.parquet(DATA_PATH)
 
     if sample_fraction < 1.0:
         df = df.sample(withReplacement=False, fraction=sample_fraction, seed=42)
 
-    # -------------------------------------------------------------------
-    # Preparación previa con DataFrame
-    # -------------------------------------------------------------------
     df_prep = (
         df
         .select(
@@ -219,26 +196,21 @@ def analyze_delay_report_rdd():
             "security_delay",
             "late_aircraft_delay",
         )
-        .repartition(8)
+        .repartition(NUM_PARTITIONS)
         .persist(StorageLevel.MEMORY_AND_DISK)
     )
 
     total_rows = df_prep.count()
-    print(f"Filas preparadas: {total_rows}")
+    print(f"Prepared rows: {total_rows}")
 
     if total_rows == 0:
-        print("No hay filas para procesar con esta fracción.")
+        print("There are no rows to process with this fraction.")
         spark.stop()
         return
 
     base_rdd = df_prep.rdd
 
-    # ===================================================================
-    # PARTE A:
-    # Estadísticas por aeropuerto, mes y rango de retraso
-    # ===================================================================
-
-    print("Ejecutando Map/Reduce Parte A: rangos de retraso...")
+    print("Running Map/Reduce Part A: delay ranges")
 
     def map_stats(row):
         airport = row.origin if row.origin else "UNKNOWN"
@@ -251,9 +223,9 @@ def analyze_delay_report_rdd():
 
         key = (airport, month, delay_category)
         value = (
-            1,          # count
-            dep_delay,  # sum dep delay
-            arr_delay,  # sum arr delay
+            1,
+            dep_delay,
+            arr_delay,
         )
 
         return key, value
@@ -282,16 +254,11 @@ def analyze_delay_report_rdd():
     stats_rdd = (
         base_rdd
         .map(map_stats)
-        .reduceByKey(reduce_stats, numPartitions=8)
+        .reduceByKey(reduce_stats, numPartitions=NUM_PARTITIONS)
         .map(format_stats)
     )
 
-    # ===================================================================
-    # PARTE B:
-    # Top 3 causas por aeropuerto, mes y rango de retraso
-    # ===================================================================
-
-    print("Ejecutando Map/Reduce Parte B: top 3 causas...")
+    print("Running Map/Reduce Part B: top 3 causes")
 
     def map_cause(row):
         airport = row.origin if row.origin else "UNKNOWN"
@@ -320,34 +287,29 @@ def analyze_delay_report_rdd():
         base_rdd
         .map(map_cause)
         .filter(lambda x: x is not None)
-        .reduceByKey(lambda a, b: a + b, numPartitions=8)
+        .reduceByKey(lambda a, b: a + b, numPartitions=NUM_PARTITIONS)
         .map(format_cause_count)
     )
 
     top_causes_rdd = (
         cause_counts_rdd
-        .groupByKey(numPartitions=8)
+        .groupByKey(numPartitions=NUM_PARTITIONS)
         .mapValues(top3_causes_to_string)
     )
 
-    # ===================================================================
-    # JOIN final:
-    # Unimos estadísticas y top 3 causas
-    # ===================================================================
-
-    print("Uniendo estadísticas con causas...")
+    print("Joining statistics with causes")
 
     final_rdd = (
         stats_rdd
-        .leftOuterJoin(top_causes_rdd, numPartitions=8)
+        .leftOuterJoin(top_causes_rdd, numPartitions=NUM_PARTITIONS)
         .map(lambda item: (
-            item[0][0],                         # Departure_Airport
-            int(item[0][1]),                    # Month
-            item[0][2],                         # Delay_Category
-            int(item[1][0][0]),                 # Total_Flights
-            float(item[1][0][1]),               # Avg_Dep_Delay
-            float(item[1][0][2]),               # Avg_Arr_Delay
-            item[1][1] if item[1][1] else "",   # Top_3_Causes
+            item[0][0],
+            int(item[0][1]),
+            item[0][2],
+            int(item[1][0][0]),
+            float(item[1][0][1]),
+            float(item[1][0][2]),
+            item[1][1] if item[1][1] else "",
         ))
     )
 
@@ -367,10 +329,10 @@ def analyze_delay_report_rdd():
         .persist(StorageLevel.MEMORY_AND_DISK)
     )
 
-    print("\n--- PRIMERAS 10 FILAS RESULTADO 3.2 RDD ---")
+    print("\nFIRST 10 ROWS OF RESULT 3.2 RDD:")
     result_df.show(10, truncate=False)
 
-    print(f"Guardando resultados en: {output_path}")
+    print(f"Saving results to: {output_path}")
 
     (
         result_df
@@ -378,15 +340,14 @@ def analyze_delay_report_rdd():
         .write
         .mode("overwrite")
         .option("header", True)
-        .csv(str(output_path))
+        .csv(output_path)
     )
 
     result_df.unpersist()
     df_prep.unpersist()
 
-    print("--- ¡Análisis 3.2 (RDD) completado! ---")
+    print("3.2 (RDD) completed:")
     spark.stop()
-
 
 if __name__ == "__main__":
     analyze_delay_report_rdd()

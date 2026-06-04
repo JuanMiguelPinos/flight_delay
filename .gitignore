@@ -2,6 +2,7 @@
 data/raw/
 data/processed/
 data/hive/flights_clean/
+data/hive/results/
 
 # Local generated results
 data/results/*

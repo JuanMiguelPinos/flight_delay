@@ -1,0 +1,29 @@
+Environment,Technology,Analysis,Input_Size,Cluster_Size,Time_s
+Local,Spark SQL,3.1,25%,local,3.44
+Local,Spark SQL,3.2,25%,local,5.15
+Local,Spark Core,3.1,25%,local,17.39
+Local,Spark Core,3.2,25%,local,43.9
+Local,Spark SQL,3.1,50%,local,1.93
+Local,Spark SQL,3.2,50%,local,3.58
+Local,Spark Core,3.1,50%,local,27.22
+Local,Spark Core,3.2,50%,local,58.68
+Local,Spark SQL,3.1,100%,local,3.28
+Local,Spark SQL,3.2,100%,local,5.46
+Local,Spark Core,3.1,100%,local,44.7
+Local,Spark Core,3.2,100%,local,91.65
+Local,Hive,3.1,100%,local,11.27
+Local,Hive,3.2,100%,local,25.85
+EMR,Spark SQL,3.1,25%,1-primary-1-core,11.36
+EMR,Spark SQL,3.2,25%,1-primary-1-core,12.05
+EMR,Spark Core,3.1,25%,1-primary-1-core,33.18
+EMR,Spark Core,3.2,25%,1-primary-1-core,55.54
+EMR,Spark SQL,3.1,50%,1-primary-1-core,7.18
+EMR,Spark SQL,3.2,50%,1-primary-1-core,6.18
+EMR,Spark Core,3.1,50%,1-primary-1-core,56.83
+EMR,Spark Core,3.2,50%,1-primary-1-core,103.97
+EMR,Spark SQL,3.1,100%,1-primary-1-core,10.63
+EMR,Spark SQL,3.2,100%,1-primary-1-core,6.52
+EMR,Spark Core,3.1,100%,1-primary-1-core,108.0
+EMR,Spark Core,3.2,100%,1-primary-1-core,205.97
+EMR,Hive,3.1,100%,1-primary-1-core,152
+EMR,Hive,3.2,100%,1-primary-1-core,153

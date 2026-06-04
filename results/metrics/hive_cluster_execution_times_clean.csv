@@ -1,0 +1,3 @@
+Environment,Technology,Analysis,Input_Size,Cluster_Size,Time_s
+EMR,Hive,3.1,100%,1-primary-1-core,152
+EMR,Hive,3.2,100%,1-primary-1-core,153

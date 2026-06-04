@@ -124,7 +124,7 @@ flight_delay_project/
 │
 ├── report/
 │   ├── figures/
-│   └── paper.tex
+│   └── flight_delay.pdf
 │
 └── docs/
     └── AWS_EMR_GUIDE.md

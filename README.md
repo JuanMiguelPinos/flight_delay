@@ -285,13 +285,13 @@ docker compose up -d
 Create the Hive tables:
 
 ```bash
-docker exec -it hive-server hive -f /opt/hive/scripts/create_hive_tables.sql
+docker exec -it hive4 hive -f /opt/hive/scripts/create_hive_tables.sql
 ```
 
 Run the Hive analyses:
 
 ```bash
-docker exec -it hive-server hive -f /opt/hive/scripts/analysis_hive.sql
+docker exec -it hive4 hive -f /opt/hive/scripts/analysis_hive.sql
 ```
 
 The container name may vary depending on the Docker Compose configuration.
@@ -468,7 +468,7 @@ The comparison focuses on:
 The final report is located in:
 
 ```text
-report/paper.tex
+report/flight_delay.pdf
 ```
 
 The report includes:

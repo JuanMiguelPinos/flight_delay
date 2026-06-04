@@ -117,6 +117,9 @@ flight_delay_project/
 │       ├── hive_3_2_head.txt
 │       ├── spark_sql_3_1_50pct_head.csv
 │       └── spark_sql_3_1_100pct_head.csv
+│       ├── spark_sql_3_2_100pct_head.csv
+│       ├── spark_sql_3_1_100pct_head.csv
+│       └── spark_sql_3_2_100pct_head.csv
 |
 ├── tools/
 │   ├── build_execution_times_all.py
@@ -407,7 +410,10 @@ results/samples/
 ├── hive_3_1_head.txt
 ├── hive_3_2_head.txt
 ├── spark_sql_3_1_50pct_head.csv
-└── spark_sql_3_1_100pct_head.csv
+├── spark_sql_3_1_100pct_head.csv
+├── spark_sql_3_2_100pct_head.csv
+├── spark_core_3_1_100pct_head.csv
+└── spark_core_3_2_100pct_head.csv
 ```
 
 Full generated outputs, Parquet files, temporary files, and the original dataset are not committed to GitHub.
